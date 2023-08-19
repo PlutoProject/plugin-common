@@ -17,7 +17,9 @@ import javax.inject.Inject
 @Suppress("UNUSED_PARAMETER")
 @Plugin(
     id = "pluto-connector",
-    name = "pluto-connector"
+    name = "pluto-connector",
+    version = "3.0.0-SNAPSHOT",
+    authors = ["nostalfinals", "Members of PlutoProject"]
 )
 class VelocityConnectorPlugin @Inject constructor(server: ProxyServer, logger: Logger, @DataDirectory dataDir: Path) {
 
