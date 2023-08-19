@@ -10,3 +10,4 @@ plugins {
 }
 
 rootProject.name = "plugin-common"
+include("pluto-connector")
