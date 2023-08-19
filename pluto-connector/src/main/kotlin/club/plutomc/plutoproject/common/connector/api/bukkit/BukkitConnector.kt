@@ -17,8 +17,6 @@ import redis.clients.jedis.JedisPubSub
 class BukkitConnector(jedis: JedisPool): Connector {
 
     companion object {
-        val gson = Gson()
-
         private fun generateRequest(): String {
             val jsonObject = JsonObject()
             jsonObject.add("request_type", JsonParser.parseString("mongo"))

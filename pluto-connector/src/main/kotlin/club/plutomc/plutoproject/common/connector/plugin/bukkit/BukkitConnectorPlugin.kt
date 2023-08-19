@@ -21,14 +21,13 @@ class BukkitConnectorPlugin: JavaPlugin() {
 
         val jedisHost = checkNotNull(RedisUtils.getRedisHost())
         val jedisPort = checkNotNull(RedisUtils.getRedisPort()?.toInt())
-        val jedisPassword = checkNotNull(RedisUtils.getRedisPassword())
 
         val jedisPoolConfig = JedisPoolConfig()
         jedisPoolConfig.testOnCreate = true
         jedisPoolConfig.testOnBorrow = true
         jedisPoolConfig.testOnReturn = true
 
-        val jedisPool = JedisPool(jedisPoolConfig, jedisHost, jedisPort, 2000, jedisPassword)
+        val jedisPool = JedisPool(jedisPoolConfig, jedisHost, jedisPort)
         connector = BukkitConnector(jedisPool)
 
         ConnectorApiProvider.connector = connector
