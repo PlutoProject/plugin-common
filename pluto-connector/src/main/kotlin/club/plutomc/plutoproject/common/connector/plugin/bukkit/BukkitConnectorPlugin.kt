@@ -3,40 +3,24 @@ package club.plutomc.plutoproject.common.connector.plugin.bukkit
 import club.plutomc.plutoproject.common.connector.api.Connector
 import club.plutomc.plutoproject.common.connector.api.ConnectorApiProvider
 import club.plutomc.plutoproject.common.connector.impl.bukkit.BukkitConnector
-import club.plutomc.plutoproject.common.connector.plugin.RedisUtils
+import club.plutomc.plutoproject.common.connector.plugin.DatabaseUtils
 import org.bukkit.plugin.java.JavaPlugin
-import redis.clients.jedis.JedisPool
-import redis.clients.jedis.JedisPoolConfig
 
-class BukkitConnectorPlugin: JavaPlugin() {
+class BukkitConnectorPlugin : JavaPlugin() {
 
     companion object {
-        private lateinit var instance: JavaPlugin
         private lateinit var connector: Connector
     }
 
     override fun onEnable() {
-        instance = this
-        logger.info("Connector Bukkit - Enabled")
-
-        val jedisHost = checkNotNull(RedisUtils.getRedisHost())
-        val jedisPort = checkNotNull(RedisUtils.getRedisPort()?.toInt())
-
-        val jedisPoolConfig = JedisPoolConfig()
-        jedisPoolConfig.testOnCreate = true
-        jedisPoolConfig.testOnBorrow = true
-        jedisPoolConfig.testOnReturn = true
-
-        val jedisPool = JedisPool(jedisPoolConfig, jedisHost, jedisPort)
-        connector = BukkitConnector(jedisPool)
-
+        connector = BukkitConnector(DatabaseUtils.createJedisPool())
         ConnectorApiProvider.connector = connector
+
+        logger.info("Connector Bukkit - Enabled")
     }
 
     override fun onDisable() {
-        connector.mongo.close()
-        connector.jedis.close()
-
+        connector.close()
         logger.info("Connector Bukkit - Disabled")
     }
 

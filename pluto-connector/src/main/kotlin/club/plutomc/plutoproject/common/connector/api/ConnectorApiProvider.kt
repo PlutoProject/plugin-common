@@ -8,7 +8,7 @@ object ConnectorApiProvider {
             return checkNotNull(_connector)
         }
         set(value) {
-            if  (_connector != null) {
+            if (_connector != null) {
                 return
             }
 

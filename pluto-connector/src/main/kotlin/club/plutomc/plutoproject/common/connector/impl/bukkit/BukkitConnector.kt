@@ -12,15 +12,22 @@ import org.bson.UuidRepresentation
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPubSub
+import java.util.*
 
-class BukkitConnector(jedis: JedisPool): Connector {
+class BukkitConnector(jedis: JedisPool) : Connector {
 
     companion object {
-        private fun generateRequest(): String {
-            val jsonObject = JsonObject()
-            jsonObject.add("request_type", JsonParser.parseString("mongo"))
+        private val requestIds: MutableList<String> = mutableListOf()
 
-            return jsonObject.toString()
+        private fun generateRequest(): String {
+            val requestObject = JsonObject()
+            val id = UUID.randomUUID().toString()
+
+            requestObject.add("type", JsonParser.parseString("mongo"))
+            requestObject.add("id", JsonParser.parseString(id))
+            requestIds.add(id)
+
+            return requestObject.toString()
         }
     }
 
@@ -33,6 +40,11 @@ class BukkitConnector(jedis: JedisPool): Connector {
     override val mongo: MongoClient
         get() = _mongo
 
+    override fun close() {
+        _jedis.close()
+        _mongo.close()
+    }
+
     init {
         this._jedis = jedis
         this.jedis.publish("connector", generateRequest())
@@ -40,12 +52,18 @@ class BukkitConnector(jedis: JedisPool): Connector {
         this.jedis.subscribe(object : JedisPubSub() {
             override fun onMessage(channel: String?, message: String?) {
                 val nonNullMessage = checkNotNull(message)
-                val jsonObject = JsonParser.parseString(nonNullMessage).asJsonObject
+                val resultObject = JsonParser.parseString(nonNullMessage).asJsonObject
 
-                val connectionString = ConnectionString(jsonObject.get("connection_string").asString)
-                val username = jsonObject.get("username").asString
-                val database = jsonObject.get("database").asString
-                val password = jsonObject.get("password").asString
+                val id = resultObject.get("id").asString
+
+                if (!requestIds.contains(id)) {
+                    return
+                }
+
+                val connectionString = ConnectionString(resultObject.get("connection_string").asString)
+                val username = resultObject.get("username").asString
+                val database = resultObject.get("database").asString
+                val password = resultObject.get("password").asString
 
                 val credentials = MongoCredential.createCredential(
                     username,
@@ -60,6 +78,7 @@ class BukkitConnector(jedis: JedisPool): Connector {
                     .build()
 
                 _mongo = MongoClients.create(settings)
+                requestIds.remove(id)
             }
         }, "connector")
     }
