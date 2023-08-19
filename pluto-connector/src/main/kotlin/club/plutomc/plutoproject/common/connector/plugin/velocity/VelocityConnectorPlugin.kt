@@ -14,6 +14,7 @@ import java.nio.file.Path
 import java.util.logging.Logger
 import javax.inject.Inject
 
+@Suppress("UNUSED_PARAMETER")
 @Plugin(
     id = "pluto-connector",
     name = "pluto-connector"
