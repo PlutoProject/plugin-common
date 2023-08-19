@@ -2,7 +2,7 @@ package club.plutomc.plutoproject.common.connector.plugin.velocity
 
 import club.plutomc.plutoproject.common.connector.api.Connector
 import club.plutomc.plutoproject.common.connector.api.ConnectorApiProvider
-import club.plutomc.plutoproject.common.connector.impl.bukkit.BukkitConnector
+import club.plutomc.plutoproject.common.connector.impl.velocity.VelocityConnector
 import club.plutomc.plutoproject.common.connector.plugin.DatabaseUtils
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
@@ -43,7 +43,7 @@ class VelocityConnectorPlugin @Inject constructor(server: ProxyServer, logger: L
             return
         }
 
-        connector = BukkitConnector(DatabaseUtils.createJedisPool())
+        connector = VelocityConnector(DatabaseUtils.createJedisPool(), DatabaseUtils.createMongoClient())
         ConnectorApiProvider.connector = connector
         processor = RequestProcessor()
 

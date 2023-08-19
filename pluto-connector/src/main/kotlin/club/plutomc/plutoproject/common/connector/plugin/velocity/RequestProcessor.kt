@@ -33,15 +33,15 @@ internal class RequestProcessor {
                         val mongoPassword = checkNotNull(DatabaseUtils.getMongoPassword())
 
                         resultObject.add("id", JsonParser.parseString(id))
-                        resultObject.add("connection_string", JsonParser.parseString("mongodb://$mongoHost:$mongoPort"))
-                        resultObject.add("username", JsonParser.parseString(mongoUsername))
-                        resultObject.add("database", JsonParser.parseString(mongoDatabase))
-                        resultObject.add("password", JsonParser.parseString(mongoPassword))
+                        resultObject.addProperty("connection_string", "mongodb://$mongoHost:$mongoPort")
+                        resultObject.addProperty("username", mongoUsername)
+                        resultObject.addProperty("database", mongoDatabase)
+                        resultObject.addProperty("password", mongoPassword)
 
-                        ConnectorApiProvider.connector.jedis.publish("connector", resultObject.toString())
+                        ConnectorApiProvider.connector.jedis.publish("connector_proxy", resultObject.toString())
                     }
                 }
-            }, "connector")
+            }, "connector_bukkit")
         }
     }
 
