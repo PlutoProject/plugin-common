@@ -1,6 +1,6 @@
 package club.plutomc.plutoproject.common.connector.plugin
 
-object RedisUtils {
+internal object RedisUtils {
 
     private fun getInformation(property: String, env: String): String? {
         var information = System.getProperty(property)

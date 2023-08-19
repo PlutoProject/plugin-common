@@ -2,7 +2,7 @@ package club.plutomc.plutoproject.common.connector.plugin.bukkit
 
 import club.plutomc.plutoproject.common.connector.api.Connector
 import club.plutomc.plutoproject.common.connector.api.ConnectorApiProvider
-import club.plutomc.plutoproject.common.connector.api.bukkit.BukkitConnector
+import club.plutomc.plutoproject.common.connector.impl.bukkit.BukkitConnector
 import club.plutomc.plutoproject.common.connector.plugin.RedisUtils
 import org.bukkit.plugin.java.JavaPlugin
 import redis.clients.jedis.JedisPool

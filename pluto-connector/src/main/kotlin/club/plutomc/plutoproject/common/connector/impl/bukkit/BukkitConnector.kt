@@ -1,7 +1,6 @@
-package club.plutomc.plutoproject.common.connector.api.bukkit
+package club.plutomc.plutoproject.common.connector.impl.bukkit
 
 import club.plutomc.plutoproject.common.connector.api.Connector
-import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.mongodb.ConnectionString
