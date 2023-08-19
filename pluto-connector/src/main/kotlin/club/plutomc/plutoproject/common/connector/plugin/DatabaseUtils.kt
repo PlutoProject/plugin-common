@@ -1,5 +1,11 @@
 package club.plutomc.plutoproject.common.connector.plugin
 
+import com.mongodb.ConnectionString
+import com.mongodb.MongoClientSettings
+import com.mongodb.MongoCredential
+import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoClients
+import org.bson.UuidRepresentation
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPoolConfig
 
@@ -29,16 +35,16 @@ internal object DatabaseUtils {
         return getInformation("redisPort", "REDIS_PORT")
     }
 
-    internal fun createJedisPool(): JedisPool {
-        val jedisHost = checkNotNull(DatabaseUtils.getRedisHost())
-        val jedisPort = checkNotNull(DatabaseUtils.getRedisPort()?.toInt())
-
+    internal fun createJedisPool(
+        host: String = checkNotNull(getRedisHost()),
+        port: String = checkNotNull(getRedisPort())
+    ): JedisPool {
         val jedisPoolConfig = JedisPoolConfig()
         jedisPoolConfig.testOnCreate = true
         jedisPoolConfig.testOnBorrow = true
         jedisPoolConfig.testOnReturn = true
 
-        return JedisPool(jedisPoolConfig, jedisHost, jedisPort)
+        return JedisPool(jedisPoolConfig, host, port.toInt())
     }
 
     internal fun getMongoHost(): String? {
@@ -59,6 +65,28 @@ internal object DatabaseUtils {
 
     internal fun getMongoPassword(): String? {
         return getInformation("mongoPassword", "MONGO_Password")
+    }
+
+    internal fun createMongoClient(
+        connectionStr: String = "mongodb://${checkNotNull(getMongoHost())}:${checkNotNull(getMongoPort())}",
+        username: String = checkNotNull(getMongoUsername()),
+        database: String = checkNotNull(getMongoDatabase()),
+        password: String = checkNotNull(getMongoPassword())
+    ): MongoClient {
+        val connectionString = ConnectionString(connectionStr)
+        val credentials = MongoCredential.createCredential(
+            username,
+            database,
+            password.toCharArray()
+        )
+
+        val settings = MongoClientSettings.builder()
+            .uuidRepresentation(UuidRepresentation.STANDARD)
+            .applyConnectionString(connectionString)
+            .credential(credentials)
+            .build()
+
+        return MongoClients.create(settings)
     }
 
 }
