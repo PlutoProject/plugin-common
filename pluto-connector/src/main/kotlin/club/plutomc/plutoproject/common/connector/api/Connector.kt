@@ -8,4 +8,6 @@ interface Connector {
     val jedis: Jedis
     val mongo: MongoClient
 
+    fun close()
+
 }
