@@ -1,0 +1,6 @@
+main: club.plutomc.plutoproject.common.connector.plugin.bukkit.BukkitConnectorPlugin
+name: pluto-connector
+version: 3.0.0-SNAPSHOT
+authors:
+  - nostalfinals
+  - Members of PlutoProject
