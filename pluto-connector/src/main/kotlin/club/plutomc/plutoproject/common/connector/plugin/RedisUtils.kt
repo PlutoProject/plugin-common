@@ -26,12 +26,4 @@ object RedisUtils {
         return getInformation("redisPort", "REDIS_PORT")
     }
 
-    internal fun getRedisUsername(): String? {
-        return getInformation("redisUsername", "REDIS_USERNAME")
-    }
-
-    internal fun getRedisPassword(): String? {
-        return getInformation("redisPassword", "REDIS_PASSWORD")
-    }
-
 }
