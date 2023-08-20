@@ -5,11 +5,16 @@ import club.plutomc.plutoproject.common.connector.plugin.DatabaseUtils
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.mongodb.client.MongoClient
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPubSub
 import java.util.*
 
+@OptIn(DelicateCoroutinesApi::class)
 class BukkitConnector(jedis: JedisPool) : Connector {
 
     companion object {
@@ -43,9 +48,14 @@ class BukkitConnector(jedis: JedisPool) : Connector {
 
     init {
         this._jedis = jedis
-        this.jedis.publish("connector_bukkit", generateRequest())
+        val publishJob = GlobalScope.launch {
+            while (true) {
+                _jedis.resource.publish("connector_bukkit", generateRequest())
+                delay(5000)
+            }
+        }
 
-        this.jedis.subscribe(object : JedisPubSub() {
+        _jedis.resource.subscribe(object : JedisPubSub() {
             override fun onMessage(channel: String?, message: String?) {
                 val nonNullMessage = checkNotNull(message)
                 val resultObject = JsonParser.parseString(nonNullMessage).asJsonObject
@@ -56,13 +66,15 @@ class BukkitConnector(jedis: JedisPool) : Connector {
                     return
                 }
 
+                publishJob.cancel()
+
                 val connectionString = resultObject.get("connection_string").asString
                 val username = resultObject.get("username").asString
                 val database = resultObject.get("database").asString
                 val password = resultObject.get("password").asString
 
                 _mongo = DatabaseUtils.createMongoClient(connectionString, username, database, password)
-                requestIds.remove(id)
+                requestIds.clear()
             }
         }, "connector_proxy")
     }
