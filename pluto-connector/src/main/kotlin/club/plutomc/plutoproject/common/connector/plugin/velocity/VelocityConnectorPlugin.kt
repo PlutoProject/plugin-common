@@ -24,8 +24,8 @@ import javax.inject.Inject
 class VelocityConnectorPlugin @Inject constructor(server: ProxyServer, logger: Logger, @DataDirectory dataDir: Path) {
 
     companion object {
+        lateinit var logger: Logger
         private lateinit var server: ProxyServer
-        private lateinit var logger: Logger
         private lateinit var dataDir: Path
         private lateinit var connector: Connector
         private lateinit var processor: RequestProcessor

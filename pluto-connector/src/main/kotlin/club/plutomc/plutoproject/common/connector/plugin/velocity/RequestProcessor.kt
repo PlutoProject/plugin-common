@@ -39,6 +39,7 @@ internal class RequestProcessor {
                         resultObject.addProperty("password", mongoPassword)
 
                         ConnectorApiProvider.connector.jedis.publish("connector_proxy", resultObject.toString())
+                        VelocityConnectorPlugin.logger.info("A connection request was processed. $nonNullMessage")
                     }
                 }
             }, "connector_bukkit")
