@@ -1,0 +1,3 @@
+main: club.plutomc.plutoproject.common.runtime.BukkitRuntimePlugin
+name: pluto-runtime
+version: 3.0.0-SNAPSHOT
