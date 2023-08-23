@@ -10,8 +10,8 @@ class VelocityConnector(jedis: JedisPool, mongo: MongoClient) : Connector {
     private var _jedis: JedisPool
     private var _mongo: MongoClient
 
-    override val jedis: Jedis
-        get() = _jedis.resource
+    override val jedis: JedisPool
+        get() = _jedis
     override val mongo: MongoClient
         get() = _mongo
 
