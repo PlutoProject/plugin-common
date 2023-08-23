@@ -4,6 +4,7 @@ import club.plutomc.plutoproject.common.connector.api.Connector
 import club.plutomc.plutoproject.common.connector.api.ConnectorApiProvider
 import club.plutomc.plutoproject.common.connector.impl.velocity.VelocityConnector
 import club.plutomc.plutoproject.common.connector.plugin.DatabaseUtils
+import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
@@ -12,7 +13,6 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory
 import com.velocitypowered.api.proxy.ProxyServer
 import java.nio.file.Path
 import java.util.logging.Logger
-import javax.inject.Inject
 
 @Suppress("UNUSED_PARAMETER")
 @Plugin(
