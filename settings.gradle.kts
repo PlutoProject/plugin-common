@@ -11,3 +11,4 @@ plugins {
 
 rootProject.name = "plugin-common"
 include("pluto-connector")
+include("pluto-runtime")

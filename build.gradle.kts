@@ -40,8 +40,8 @@ allprojects {
 
     dependencies {
         // Kotlin language dependencies
-        api(kotlin("stdlib-jdk8", "1.9.0"))
-        api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+        compileOnly(kotlin("stdlib-jdk8", "1.9.0"))
+        compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     }
 
     java {
@@ -49,12 +49,16 @@ allprojects {
             languageVersion.set(JavaLanguageVersion.of(17))
         }
     }
+
+    tasks.withType<org.gradle.jvm.tasks.Jar>().configureEach {
+        destinationDirectory = file("$rootDir/products")
+    }
 }
 
-tasks.named<ShadowJar>("shadowJar").configure {
+/*tasks.named<ShadowJar>("shadowJar").configure {
     relocate("kotlin", "libs.kotlin")
     relocate("kotlinx", "libs.kotlinx")
-}
+}*/
 
 dependencies {
 
