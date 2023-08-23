@@ -2,6 +2,8 @@ main: club.plutomc.plutoproject.common.connector.plugin.bukkit.BukkitConnectorPl
 name: pluto-connector
 version: 3.0.0-SNAPSHOT
 api-version: 1.13
+depend:
+  - pluto-runtime
 authors:
   - nostalfinals
   - Members of PlutoProject
