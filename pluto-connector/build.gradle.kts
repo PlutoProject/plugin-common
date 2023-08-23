@@ -10,18 +10,23 @@ repositories {
 }
 
 dependencies {
-    api("com.google.code.gson:gson:2.10.1")
-
-    // Database drivers
-    api("redis.clients:jedis:4.4.3")
-    api("org.mongodb:mongodb-driver-sync:4.10.2")
-
     // Paper
     compileOnly("io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT")
 
     // Velocity
     compileOnly("com.velocitypowered:velocity-api:3.1.1")
     kapt("com.velocitypowered:velocity-api:3.1.1")
+
+    // Java libraries
+    compileOnly("commons-io:commons-io:2.13.0")
+    compileOnly("com.google.guava:guava:32.1.2-jre")
+    compileOnly("com.google.code.gson:gson:2.10.1")
+    compileOnly("redis.clients:jedis:4.4.3")
+    compileOnly("com.google.code.gson:gson:2.10.1")
+
+    // Database drivers
+    compileOnly("redis.clients:jedis:4.4.3")
+    compileOnly("org.mongodb:mongodb-driver-sync:4.10.2")
 }
 
 publishing {
