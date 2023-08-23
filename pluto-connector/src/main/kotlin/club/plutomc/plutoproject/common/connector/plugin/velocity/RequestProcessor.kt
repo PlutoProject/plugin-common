@@ -15,7 +15,7 @@ internal class RequestProcessor {
 
     companion object {
         fun process() {
-            ConnectorApiProvider.connector.jedis.subscribe(object : JedisPubSub() {
+            ConnectorApiProvider.connector.jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
                     val nonNullMessage = checkNotNull(message)
                     val requestObject = JsonParser.parseString(nonNullMessage).asJsonObject
@@ -38,7 +38,7 @@ internal class RequestProcessor {
                         resultObject.addProperty("database", mongoDatabase)
                         resultObject.addProperty("password", mongoPassword)
 
-                        ConnectorApiProvider.connector.jedis.publish("connector_proxy", resultObject.toString())
+                        ConnectorApiProvider.connector.jedis.resource.publish("connector_proxy", resultObject.toString())
                         VelocityConnectorPlugin.logger.info("A connection request was processed. $nonNullMessage")
                     }
                 }
