@@ -1,9 +1,8 @@
-package club.plutomc.plutoproject.common.connector.plugin.velocity
+package club.plutomc.plutoproject.connector.plugin
 
-import club.plutomc.plutoproject.common.connector.api.Connector
-import club.plutomc.plutoproject.common.connector.api.ConnectorApiProvider
-import club.plutomc.plutoproject.common.connector.impl.velocity.VelocityConnector
-import club.plutomc.plutoproject.common.connector.plugin.DatabaseUtils
+import club.plutomc.plutoproject.connector.api.Connector
+import club.plutomc.plutoproject.connector.api.ConnectorApiProvider
+import club.plutomc.plutoproject.connector.impl.velocity.VelocityConnector
 import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent

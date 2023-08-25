@@ -1,4 +1,4 @@
-package club.plutomc.plutoproject.common.connector.api
+package club.plutomc.plutoproject.connector.api
 
 import com.mongodb.client.MongoClient
 import redis.clients.jedis.Jedis

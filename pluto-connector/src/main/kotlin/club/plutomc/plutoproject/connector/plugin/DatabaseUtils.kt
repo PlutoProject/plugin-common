@@ -1,4 +1,4 @@
-package club.plutomc.plutoproject.common.connector.plugin
+package club.plutomc.plutoproject.connector.plugin
 
 import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
