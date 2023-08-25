@@ -9,6 +9,14 @@
 - `pluto-redis-messaging`: 基于 Jedis Pub/Sub 的通信库。
 - `pluto-profile`: 玩家档案管理。
 
+## 开发语言
+
+在通常情况下，所有插件都使用 Kotlin 语言进行开发。
+
+## 向本项目提交代码
+
+请移步《星社贡献指南》一文。
+
 ## 协议
 
 本项目基于 [GNU Lesser General Public License v3.0](https://www.gnu.org/licenses/lgpl-3.0.en.html) 开源。
