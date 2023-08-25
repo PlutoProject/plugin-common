@@ -1,7 +1,6 @@
-package club.plutomc.plutoproject.common.connector.plugin.velocity
+package club.plutomc.plutoproject.connector.plugin
 
-import club.plutomc.plutoproject.common.connector.api.ConnectorApiProvider
-import club.plutomc.plutoproject.common.connector.plugin.DatabaseUtils
+import club.plutomc.plutoproject.connector.api.ConnectorApiProvider
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.DelicateCoroutinesApi

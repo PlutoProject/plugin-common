@@ -1,9 +1,8 @@
-package club.plutomc.plutoproject.common.connector.plugin.bukkit
+package club.plutomc.plutoproject.connector.plugin
 
-import club.plutomc.plutoproject.common.connector.api.Connector
-import club.plutomc.plutoproject.common.connector.api.ConnectorApiProvider
-import club.plutomc.plutoproject.common.connector.impl.bukkit.BukkitConnector
-import club.plutomc.plutoproject.common.connector.plugin.DatabaseUtils
+import club.plutomc.plutoproject.connector.api.Connector
+import club.plutomc.plutoproject.connector.api.ConnectorApiProvider
+import club.plutomc.plutoproject.connector.impl.bukkit.BukkitConnector
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.mongodb.client.MongoClient
