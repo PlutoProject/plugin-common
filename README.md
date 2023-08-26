@@ -8,6 +8,7 @@
 - `pluto-connector`: 统一管理数据库连接与调用。
 - `pluto-redis-messaging`: 基于 Jedis Pub/Sub 的通信库。
 - `pluto-profile`: 玩家档案管理。
+- `pluto-networking`: 服务器网络相关优化。
 
 ## 开发语言
 
