@@ -2,81 +2,36 @@ package club.plutomc.plutoproject.connector.plugin
 
 import club.plutomc.plutoproject.connector.api.Connector
 import club.plutomc.plutoproject.connector.api.ConnectorApiProvider
-import club.plutomc.plutoproject.connector.impl.bukkit.BukkitConnector
+import club.plutomc.plutoproject.connector.impl.BasicConnector
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.mongodb.ConnectionString
+import com.mongodb.MongoClientSettings
+import com.mongodb.MongoCredential
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoClients
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.bson.UuidRepresentation
 import org.bukkit.plugin.java.JavaPlugin
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPubSub
 import java.util.*
 
+@OptIn(DelicateCoroutinesApi::class)
 class BukkitConnectorPlugin : JavaPlugin() {
 
     companion object {
         private lateinit var connector: Connector
-        private val requestIds: MutableList<String> = mutableListOf()
-
-        private fun generateRequest(): String {
-            val requestObject = JsonObject()
-            val id = UUID.randomUUID().toString()
-
-            requestObject.addProperty("type", "mongo")
-            requestObject.addProperty("id", id)
-            requestIds.add(id)
-
-            return requestObject.toString()
-        }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onEnable() {
-        val redis: JedisPool = DatabaseUtils.createJedisPool()
-        var mongo: MongoClient? = null
+        val jedis = DatabaseUtils.createJedisPool()
+        val mongo = request(jedis)
 
-        val publishJob = GlobalScope.launch {
-            while (true) {
-                redis.resource.publish("connector_bukkit", generateRequest())
-                delay(5000)
-            }
-        }
-
-        var requestProcessed = false
-
-        redis.resource.subscribe(object : JedisPubSub() {
-            override fun onMessage(channel: String?, message: String?) {
-                if (requestProcessed) {
-                    return
-                }
-
-                val nonNullMessage = checkNotNull(message)
-                val resultObject = JsonParser.parseString(nonNullMessage).asJsonObject
-
-                val id = resultObject.get("id").asString
-
-                if (!requestIds.contains(id)) {
-                    return
-                }
-
-                publishJob.cancel()
-
-                val connectionString = resultObject.get("connection_string").asString
-                val username = resultObject.get("username").asString
-                val database = resultObject.get("database").asString
-                val password = resultObject.get("password").asString
-
-                mongo = DatabaseUtils.createMongoClient(connectionString, username, database, password)
-                requestIds.clear()
-                unsubscribe()
-                requestProcessed = true
-            }
-        }, "connector_proxy")
-
-        connector = BukkitConnector(DatabaseUtils.createJedisPool(), checkNotNull(mongo))
+        connector = BasicConnector(jedis, mongo)
         ConnectorApiProvider.connector = connector
 
         logger.info("Connector Bukkit - Enabled")
@@ -87,4 +42,64 @@ class BukkitConnectorPlugin : JavaPlugin() {
         logger.info("Connector Bukkit - Disabled")
     }
 
+    private fun request(jedis: JedisPool): MongoClient {
+        lateinit var mongo: MongoClient
+        var received = false
+        val id = UUID.randomUUID()
+
+        val requestContent = JsonObject()
+
+        requestContent.addProperty("id", id.toString())
+        requestContent.addProperty("type", "request")
+
+        val requestJob = GlobalScope.launch {
+            while (!received) {
+                jedis.resource.publish("connector_bukkit", requestContent.toString())
+                delay(5000L)
+            }
+        }
+
+        jedis.resource.subscribe(object : JedisPubSub() {
+            override fun onMessage(channel: String?, message: String?) {
+                val nonNullMessage = checkNotNull(message)
+                val resultContent = JsonParser.parseString(nonNullMessage).asJsonObject
+
+                if (resultContent.get("id").asString != id.toString()) {
+                    return
+                }
+
+                if (resultContent.get("type").asString != "response") {
+                    return
+                }
+
+                val host = resultContent.get("mongo_host").asString
+                val port = resultContent.get("mongo_port").asString
+                val username = resultContent.get("mongo_username").asString
+                val database = resultContent.get("mongo_database").asString
+                val password = resultContent.get("mongo_password").asString
+
+                val connectionString = ConnectionString("mongodb://$host:$port")
+
+                val credentials = MongoCredential.createCredential(
+                    username,
+                    database,
+                    password.toCharArray()
+                )
+
+                val settings = MongoClientSettings.builder()
+                    .uuidRepresentation(UuidRepresentation.STANDARD)
+                    .applyConnectionString(connectionString)
+                    .credential(credentials)
+                    .build()
+
+                mongo = MongoClients.create(settings)
+                unsubscribe()
+            }
+        }, "connector_proxy")
+
+        received = true
+        requestJob.cancel()
+
+        return mongo
+    }
 }
