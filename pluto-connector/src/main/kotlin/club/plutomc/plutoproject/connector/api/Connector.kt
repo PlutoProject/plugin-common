@@ -1,7 +1,6 @@
 package club.plutomc.plutoproject.connector.api
 
 import com.mongodb.client.MongoClient
-import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
 
 interface Connector {
