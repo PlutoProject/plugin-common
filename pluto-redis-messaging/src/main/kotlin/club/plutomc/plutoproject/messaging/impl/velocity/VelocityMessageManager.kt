@@ -2,16 +2,15 @@ package club.plutomc.plutoproject.messaging.impl.velocity
 
 import club.plutomc.plutoproject.messaging.api.Channel
 import club.plutomc.plutoproject.messaging.api.MessageManager
+import club.plutomc.plutoproject.messaging.impl.ImplUtils
 import club.plutomc.plutoproject.messaging.impl.bukkit.BukkitChannel
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPubSub
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(DelicateCoroutinesApi::class)
 class VelocityMessageManager(jedis: JedisPool) : MessageManager {
@@ -21,19 +20,20 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
     private var isClosed = false
     private lateinit var clientInit: Job
     private lateinit var heartbeat: Job
+    private lateinit var heartbeatWait: Job
     private lateinit var clientChannelRegister: Job
     private lateinit var clientChannelExist: Job
     private lateinit var clientChannelUnregister: Job
 
     init {
-        channelMap = ConcurrentHashMap()
+        this.channelMap = ConcurrentHashMap()
         this.jedis = jedis
 
         init()
         heartbeat()
         clientChannelRegister()
         clientChannelExist()
-        clientChannelRegister()
+        clientChannelUnregister()
     }
 
     override fun register(channel: String) {
@@ -77,7 +77,6 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
         }
 
         channelMap.entries.forEach { it.value.close() }
-        jedis.close()
         heartbeat.cancel()
         clientInit.cancel()
         isClosed = true
@@ -87,80 +86,97 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
         clientInit = GlobalScope.launch {
             jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
-                    val jsonObject = JsonParser.parseString(message).asJsonObject
+                    val responseContent = JsonParser.parseString(message).asJsonObject
 
-                    if (jsonObject.get("type").asString != "message_client_request") {
+                    if (responseContent.get("type").asString != "message_client_request") {
                         return
                     }
 
-                    jsonObject.remove("type")
-                    jsonObject.addProperty("type", "message_server_response")
+                    responseContent.remove("type")
+                    responseContent.addProperty("type", "message_server_response")
 
-                    jedis.resource.publish("message_internal_proxy", jsonObject.toString())
+                    ImplUtils.debugLogInfo("Received client init request, sending response: $responseContent")
+                    jedis.resource.publish("message_internal_proxy", responseContent.toString())
                 }
             }, "message_internal_bukkit")
         }
     }
 
     private fun heartbeat() {
+        val received = AtomicBoolean(false)
+
         heartbeat = GlobalScope.launch {
             jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
-                    val jsonObject = JsonParser.parseString(message).asJsonObject
+                    val responseContent = JsonParser.parseString(message).asJsonObject
 
-                    if (jsonObject.get("type").asString != "message_client_heartbeat") {
+                    if (responseContent.get("type").asString != "message_client_heartbeat") {
                         return
                     }
 
-                    jsonObject.remove("type")
-                    jsonObject.addProperty("type", "message_server_heartbeat")
+                    received.set(true)
+                    ImplUtils.debugLogInfo("Heartbeat received: $responseContent")
+                    responseContent.remove("type")
+                    responseContent.addProperty("type", "message_server_heartbeat")
 
-                    jedis.resource.publish("message_internal_proxy", jsonObject.toString())
+                    jedis.resource.publish("message_internal_proxy", responseContent.toString())
+                    ImplUtils.debugLogInfo("Heartbeat sent: $responseContent")
                 }
             }, "message_internal_bukkit")
+        }
+
+        heartbeatWait = GlobalScope.launch {
+            while (true) {
+                delay(5000L)
+
+                if (!received.get()) {
+                    close()
+                    ImplUtils.debugLogError("Heartbeat timeout!")
+                }
+
+                received.set(false)
+            }
         }
     }
 
     private fun broadcastRegisterChannel(channel: String) {
-        val jsonObject = JsonObject()
-        jsonObject.addProperty("type", "message_server_broadcast_channel_register")
-        jsonObject.addProperty("channel_name", channel)
+        val responseContent = JsonObject()
+        responseContent.addProperty("type", "message_server_broadcast_channel_register")
+        responseContent.addProperty("channel_name", channel)
 
-        jedis.resource.publish("message_internal_proxy", jsonObject.toString())
+        ImplUtils.debugLogInfo("Broadcasting a channel registration: $responseContent")
+        jedis.resource.publish("message_internal_proxy", responseContent.toString())
     }
 
     private fun broadcastUnregisterChannel(channel: String) {
-        val jsonObject = JsonObject()
-        jsonObject.addProperty("type", "message_server_broadcast_channel_unregister")
-        jsonObject.addProperty("channel_name", channel)
+        val responseContent = JsonObject()
+        responseContent.addProperty("type", "message_server_broadcast_channel_unregister")
+        responseContent.addProperty("channel_name", channel)
 
-        jedis.resource.publish("message_internal_proxy", jsonObject.toString())
+        ImplUtils.debugLogInfo("Broadcasting a channel un-registration: $responseContent")
+        jedis.resource.publish("message_internal_proxy", responseContent.toString())
     }
 
     private fun clientChannelRegister() {
         clientChannelRegister = GlobalScope.launch {
             jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
-                    val jsonObject = JsonParser.parseString(message).asJsonObject
+                    val requestContent = JsonParser.parseString(message).asJsonObject
 
-                    if (jsonObject.get("type").asString != "message_client_register_channel") {
+                    if (requestContent.get("type").asString != "message_client_register_channel") {
                         return
                     }
 
-                    val channelName = jsonObject.get("channel_name").asString
-
-                    jsonObject.remove("type")
-                    jsonObject.addProperty("type", "message_server_register_channel")
+                    val channelName = requestContent.get("channel_name").asString
 
                     if (exist(channelName)) {
-                        jsonObject.addProperty("result", "false")
-                        jsonObject.addProperty("cause", "Already existed")
+                        ImplUtils.debugLogWarn("Received client channel registration, but already registered: $requestContent")
+                        return
                     }
-                    jsonObject.addProperty("result", "true")
 
+                    ImplUtils.debugLogInfo("Received client channel registration: $requestContent")
                     register(channelName)
-
-                    jedis.resource.publish("message_internal_proxy", jsonObject.toString())
+                    broadcastRegisterChannel(channelName)
                 }
             }, "message_internal_bukkit")
         }
@@ -170,52 +186,48 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
         clientChannelExist = GlobalScope.launch {
             jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
-                    val jsonObject = JsonParser.parseString(message).asJsonObject
+                    val requestContent = JsonParser.parseString(message).asJsonObject
 
-                    if (jsonObject.get("type").asString != "message_client_channel_exist") {
+                    if (requestContent.get("type").asString != "message_client_channel_exist") {
                         return
                     }
 
-                    val channelName = jsonObject.get("channel_name").asString
+                    val channelName = requestContent.get("channel_name").asString
 
-                    jsonObject.remove("type")
-                    jsonObject.addProperty("type", "message_server_channel_exist")
+                    requestContent.remove("type")
+                    requestContent.addProperty("type", "message_server_channel_exist")
 
                     if (!exist(channelName)) {
-                        jsonObject.addProperty("result", "false")
+                        requestContent.addProperty("result", "false")
                     }
-                    jsonObject.addProperty("result", "true")
+                    requestContent.addProperty("result", "true")
 
-                    jedis.resource.publish("message_internal_proxy", jsonObject.toString())
+                    ImplUtils.debugLogInfo("Received a client channel check, sending response: $requestContent")
+                    jedis.resource.publish("message_internal_proxy", requestContent.toString())
                 }
             }, "message_internal_bukkit")
         }
     }
 
-    private fun channelUnregister() {
+    private fun clientChannelUnregister() {
         clientChannelUnregister = GlobalScope.launch {
             jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
-                    val jsonObject = JsonParser.parseString(message).asJsonObject
+                    val requestContent = JsonParser.parseString(message).asJsonObject
 
-                    if (jsonObject.get("type").asString != "message_client_unregister_channel") {
+                    if (requestContent.get("type").asString != "message_client_unregister_channel") {
                         return
                     }
 
-                    val channelName = jsonObject.get("channel_name").asString
-
-                    jsonObject.remove("type")
-                    jsonObject.addProperty("type", "message_server_unregister_channel")
+                    val channelName = requestContent.get("channel_name").asString
 
                     if (!exist(channelName)) {
-                        jsonObject.addProperty("result", "false")
-                        jsonObject.addProperty("cause", "Not exist")
+                        ImplUtils.debugLogWarn("Received client channel un-registration, but it not registered: $requestContent")
                     }
-                    jsonObject.addProperty("result", "true")
 
+                    ImplUtils.debugLogInfo("Received client channel un-registration: $requestContent")
                     unregister(channelName)
-
-                    jedis.resource.publish("message_internal_proxy", jsonObject.toString())
+                    broadcastUnregisterChannel(channelName)
                 }
             }, "message_internal_bukkit")
         }
