@@ -6,7 +6,7 @@ import club.plutomc.plutoproject.messaging.api.MessagingApiProvider
 import club.plutomc.plutoproject.messaging.impl.bukkit.BukkitMessageManager
 import org.bukkit.plugin.java.JavaPlugin
 
-class BukkitMessagingPlugin: JavaPlugin() {
+class BukkitMessagingPlugin : JavaPlugin() {
 
     companion object {
         private lateinit var manager: MessageManager
