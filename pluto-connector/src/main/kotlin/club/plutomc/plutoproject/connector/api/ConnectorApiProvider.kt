@@ -1,4 +1,4 @@
-package club.plutomc.plutoproject.common.connector.api
+package club.plutomc.plutoproject.connector.api
 
 object ConnectorApiProvider {
 
