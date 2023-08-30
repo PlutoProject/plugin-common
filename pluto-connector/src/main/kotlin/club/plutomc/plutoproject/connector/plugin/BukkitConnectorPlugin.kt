@@ -10,10 +10,7 @@ import com.mongodb.MongoClientSettings
 import com.mongodb.MongoCredential
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.bson.UuidRepresentation
 import org.bukkit.plugin.java.JavaPlugin
 import redis.clients.jedis.JedisPool
@@ -52,50 +49,56 @@ class BukkitConnectorPlugin : JavaPlugin() {
         requestContent.addProperty("id", id.toString())
         requestContent.addProperty("type", "request")
 
+        GlobalScope.launch {
+            jedis.resource.subscribe(object : JedisPubSub() {
+                override fun onMessage(channel: String?, message: String?) {
+                    val nonNullMessage = checkNotNull(message)
+                    val resultContent = JsonParser.parseString(nonNullMessage).asJsonObject
+
+                    if (resultContent.get("id").asString != id.toString()) {
+                        return
+                    }
+
+                    if (resultContent.get("type").asString != "response") {
+                        return
+                    }
+
+                    val host = resultContent.get("mongo_host").asString
+                    val port = resultContent.get("mongo_port").asString
+                    val username = resultContent.get("mongo_username").asString
+                    val database = resultContent.get("mongo_database").asString
+                    val password = resultContent.get("mongo_password").asString
+
+                    val connectionString = ConnectionString("mongodb://$host:$port")
+
+                    val credentials = MongoCredential.createCredential(
+                        username,
+                        database,
+                        password.toCharArray()
+                    )
+
+                    val settings = MongoClientSettings.builder()
+                        .uuidRepresentation(UuidRepresentation.STANDARD)
+                        .applyConnectionString(connectionString)
+                        .credential(credentials)
+                        .build()
+
+                    mongo = MongoClients.create(settings)
+                    unsubscribe()
+                }
+            }, "connector_proxy")
+        }
+
+        runBlocking {
+            delay(3000L)
+        }
+
         val requestJob = GlobalScope.launch {
             while (!received) {
                 jedis.resource.publish("connector_bukkit", requestContent.toString())
                 delay(5000L)
             }
         }
-
-        jedis.resource.subscribe(object : JedisPubSub() {
-            override fun onMessage(channel: String?, message: String?) {
-                val nonNullMessage = checkNotNull(message)
-                val resultContent = JsonParser.parseString(nonNullMessage).asJsonObject
-
-                if (resultContent.get("id").asString != id.toString()) {
-                    return
-                }
-
-                if (resultContent.get("type").asString != "response") {
-                    return
-                }
-
-                val host = resultContent.get("mongo_host").asString
-                val port = resultContent.get("mongo_port").asString
-                val username = resultContent.get("mongo_username").asString
-                val database = resultContent.get("mongo_database").asString
-                val password = resultContent.get("mongo_password").asString
-
-                val connectionString = ConnectionString("mongodb://$host:$port")
-
-                val credentials = MongoCredential.createCredential(
-                    username,
-                    database,
-                    password.toCharArray()
-                )
-
-                val settings = MongoClientSettings.builder()
-                    .uuidRepresentation(UuidRepresentation.STANDARD)
-                    .applyConnectionString(connectionString)
-                    .credential(credentials)
-                    .build()
-
-                mongo = MongoClients.create(settings)
-                unsubscribe()
-            }
-        }, "connector_proxy")
 
         received = true
         requestJob.cancel()
