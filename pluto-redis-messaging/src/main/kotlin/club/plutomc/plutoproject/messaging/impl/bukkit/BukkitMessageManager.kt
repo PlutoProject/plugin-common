@@ -6,13 +6,14 @@ import club.plutomc.plutoproject.messaging.impl.ImplUtils
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPubSub
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
-@OptIn(DelicateCoroutinesApi::class)
+@OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class BukkitMessageManager(jedis: JedisPool) : MessageManager {
 
     private val channelMap: MutableMap<String, Channel>
@@ -22,41 +23,96 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
     private lateinit var heartbeat: Job
     private lateinit var heartbeatWait: Job
     private lateinit var serverChannelRegister: Job
+    private lateinit var serverChannelExist: Job
     private lateinit var serverChannelUnregister: Job
+    private var coroutineData: MutableSharedFlow<String>
 
     init {
         this.channelMap = ConcurrentHashMap()
         this.thisMessageManager = this
         this.jedis = jedis
+        this.coroutineData = MutableSharedFlow(10)
 
         init()
-        heartbeat()
+        // heartbeat()
         serverChannelRegister()
+        serverChannelExist()
         serverChannelUnregister()
     }
 
     override fun register(channel: String) {
-        TODO("Not yet implemented")
+        if (exist(channel)) {
+            ImplUtils.debugLogWarn("Channel register invoked, but this channel already existed!")
+            return
+        }
+
+        requestChannelRegister(channel)
+        localRegister(channel)
     }
 
     override fun get(channel: String): Channel {
-        TODO("Not yet implemented")
+        register(channel)
+        return channelMap[channel]!!
     }
 
     override fun exist(channel: String): Boolean {
-        TODO("Not yet implemented")
+        if (isClosed) {
+            ImplUtils.debugLogWarn("Channel exist invoked, but this manager already closed!")
+            return false
+        }
+
+        if (localExist(channel)) {
+            ImplUtils.debugLogInfo("Channel $channel exist in local, returning")
+            return true
+        }
+
+        val id = UUID.randomUUID()
+        val response = CompletableDeferred<String>()
+
+        GlobalScope.launch {
+            ImplUtils.debugLogInfo("Start to collect coroutine data (channelExist)")
+            coroutineData.collect {
+                if (!it.startsWith(id.toString())) {
+                    ImplUtils.debugLogWarn("Collected a data which isn't we want (id we need: $id, this data: $it)")
+                    return@collect
+                }
+
+                ImplUtils.debugLogInfo("Collected a data we want, returning ($it) ")
+                response.complete(it.substring(it.indexOf(",") + 1, it.lastIndex))
+                cancel()
+            }
+        }
+
+        runBlocking {
+            response.await()
+            ImplUtils.debugLogInfo("Deferred waiting completed! ()")
+        }
+
+        return response.getCompleted().toBoolean()
     }
 
     override fun unregister(channel: String) {
-        TODO("Not yet implemented")
+        if (!exist(channel)) {
+            return
+        }
+
+        requestChannelUnregister(channel)
+        localUnregister(channel)
     }
 
-    override fun unregister(channel: Channel) {
-        TODO("Not yet implemented")
-    }
+    override fun unregister(channel: Channel) = unregister(channel.name)
 
     override fun close() {
-        TODO("Not yet implemented")
+        if (isClosed) {
+            return
+        }
+
+        channelMap.entries.forEach { it.value.close() }
+        // heartbeat.cancel()'
+        // heartbeatWait.cancel()
+        serverChannelRegister.cancel()
+        serverChannelExist.cancel()
+        serverChannelUnregister.cancel()
     }
 
     private fun init() {
@@ -134,10 +190,57 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
         }
     }
 
+    private fun requestChannelRegister(name: String) {
+        val requestContent = JsonObject()
+        requestContent.addProperty("type", "message_client_register_channel")
+        requestContent.addProperty("channel_name", name)
+
+        ImplUtils.debugLogInfo("Sending channel register request to server: $requestContent")
+        jedis.resource.publish(requestContent.asString, "message_internal_bukkit")
+    }
+
+    private fun requestChannelExist(name: String, id: String) {
+        val requestContent = JsonObject()
+        requestContent.addProperty("id", id)
+        requestContent.addProperty("type", "message_client_channel_exist")
+
+        ImplUtils.debugLogInfo("Sending channel check-exist request to server (id: $id): $requestContent")
+        jedis.resource.publish("message_internal_bukkit", requestContent.toString())
+    }
+
+    private fun requestChannelUnregister(name: String) {
+        val requestContent = JsonObject()
+        requestContent.addProperty("type", "message_client_unregister_channel")
+        requestContent.addProperty("channel_name", name)
+
+        ImplUtils.debugLogInfo("Sending channel unregister request to server: $requestContent")
+        jedis.resource.publish(requestContent.asString, "message_internal_bukkit")
+    }
+
+    private fun localRegister(channel: String) {
+        if (localExist(channel)) {
+            return
+        }
+
+        channelMap[channel] = BukkitChannel(channel, this, jedis)
+    }
+
+    private fun localExist(channel: String): Boolean = channelMap.contains(channel)
+
+    private fun localUnregister(channel: String) {
+        if (!localExist(channel)) {
+            return
+        }
+
+        channelMap[channel]!!.close()
+        channelMap.remove(channel)
+    }
+
     private fun serverChannelRegister() {
         serverChannelRegister = GlobalScope.launch {
             jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
+                    checkNotNull(message)
                     val responseContent = JsonParser.parseString(message).asJsonObject
 
                     if (responseContent.get("type").asString != "message_server_broadcast_channel_register") {
@@ -152,7 +255,30 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
                     }
 
                     ImplUtils.debugLogInfo("Received server channel registration: $responseContent")
-                    channelMap[channelName] = BukkitChannel(channelName, thisMessageManager, jedis)
+                    localRegister(channelName)
+                }
+            }, "message_internal_proxy")
+        }
+    }
+
+    private fun serverChannelExist() {
+        serverChannelExist = GlobalScope.launch {
+            jedis.resource.subscribe(object : JedisPubSub() {
+                override fun onMessage(channel: String?, message: String?) {
+                    checkNotNull(message)
+                    val responseContent = JsonParser.parseString(message).asJsonObject
+
+                    if (responseContent.get("type").asString != "message_server_channel_exist") {
+                        return
+                    }
+
+
+                    val result = responseContent.get("result").asString
+                    val id = responseContent.get("id").asString
+
+                    runBlocking {
+                        coroutineData.emit("$id, $result")
+                    }
                 }
             }, "message_internal_proxy")
         }
@@ -162,6 +288,7 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
         serverChannelUnregister = GlobalScope.launch {
             jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
+                    checkNotNull(message)
                     val responseContent = JsonParser.parseString(message).asJsonObject
 
                     if (responseContent.get("type").asString != "message_server_broadcast_channel_unregister") {
@@ -176,7 +303,7 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
                     }
 
                     ImplUtils.debugLogInfo("Received server channel un-registration: $responseContent")
-                    channelMap.remove(channelName)
+                    localUnregister(channelName)
                 }
             }, "message_internal_proxy")
         }

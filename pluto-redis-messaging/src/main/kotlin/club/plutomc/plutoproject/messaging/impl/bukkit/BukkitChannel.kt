@@ -1,8 +1,10 @@
 package club.plutomc.plutoproject.messaging.impl.bukkit
 
-import club.plutomc.plutoproject.messaging.api.Subscription
 import club.plutomc.plutoproject.messaging.api.Channel
 import club.plutomc.plutoproject.messaging.api.MessageManager
+import club.plutomc.plutoproject.messaging.api.Subscription
+import club.plutomc.plutoproject.messaging.plugin.event.bukkit.MessageReceivedEvent
+import club.plutomc.plutoproject.messaging.plugin.event.bukkit.SelfMessageReceivedEvent
 import club.plutomc.plutoproject.messaging.impl.ImplUtils
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -10,6 +12,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.bukkit.Bukkit
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPubSub
 import java.util.*
@@ -50,7 +53,12 @@ class BukkitChannel(name: String, messageManager: MessageManager, jedis: JedisPo
             return
         }
 
-        publishMessage(content)
+        subs.forEach {
+            it.value.onMessageWithSelf(thisChannel, content)
+        }
+
+        Bukkit.getServer().pluginManager.callEvent(SelfMessageReceivedEvent(name, content))
+        publishMessageToProxy(content)
     }
 
     override fun subscribe(name: String, subscription: Subscription) {
@@ -73,7 +81,7 @@ class BukkitChannel(name: String, messageManager: MessageManager, jedis: JedisPo
         serverChannelPublish.cancel()
     }
 
-    private fun publishMessage(jsonObject: JsonObject) {
+    private fun publishMessageToProxy(jsonObject: JsonObject) {
         val requestContent = JsonObject()
         val id = UUID.randomUUID()
         ids.add(id.toString())
@@ -110,10 +118,13 @@ class BukkitChannel(name: String, messageManager: MessageManager, jedis: JedisPo
 
                     val messageContent = JsonParser.parseString(responseContent.get("content").asString).asJsonObject
                     ImplUtils.debugLogInfo("Received a message published by server: $messageContent, original message: $responseContent")
+
                     subs.forEach {
                         ImplUtils.debugLogInfo("Running action: ${it.key}")
                         it.value.onMessage(thisChannel, messageContent)
                     }
+
+                    Bukkit.getServer().pluginManager.callEvent(MessageReceivedEvent(name, messageContent))
                 }
             }, "message_internal_proxy")
         }

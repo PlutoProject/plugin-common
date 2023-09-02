@@ -30,7 +30,7 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
         this.jedis = jedis
 
         init()
-        heartbeat()
+        // heartbeat()
         clientChannelRegister()
         clientChannelExist()
         clientChannelUnregister()
@@ -46,16 +46,11 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
     }
 
     override fun get(channel: String): Channel {
-        if (!exist(channel)) {
-            register(channel)
-        }
-
+        register(channel)
         return channelMap[channel]!!
     }
 
-    override fun exist(channel: String): Boolean {
-        return channelMap.contains(channel)
-    }
+    override fun exist(channel: String): Boolean = if (!isClosed) channelMap.contains(channel) else false
 
     override fun unregister(channel: String) {
         if (!exist(channel)) {
@@ -67,9 +62,7 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
         broadcastUnregisterChannel(channel)
     }
 
-    override fun unregister(channel: Channel) {
-        unregister(channel.name)
-    }
+    override fun unregister(channel: Channel) = unregister(channel.name)
 
     override fun close() {
         if (isClosed) {
@@ -77,8 +70,12 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
         }
 
         channelMap.entries.forEach { it.value.close() }
-        heartbeat.cancel()
+        // heartbeat.cancel()
+        // heartbeatWait.cancel()
         clientInit.cancel()
+        clientChannelRegister.cancel()
+        clientChannelExist.cancel()
+        clientChannelUnregister.cancel()
         isClosed = true
     }
 
@@ -196,11 +193,7 @@ class VelocityMessageManager(jedis: JedisPool) : MessageManager {
 
                     requestContent.remove("type")
                     requestContent.addProperty("type", "message_server_channel_exist")
-
-                    if (!exist(channelName)) {
-                        requestContent.addProperty("result", "false")
-                    }
-                    requestContent.addProperty("result", "true")
+                    requestContent.addProperty("result", exist(channelName).toString())
 
                     ImplUtils.debugLogInfo("Received a client channel check, sending response: $requestContent")
                     jedis.resource.publish("message_internal_proxy", requestContent.toString())

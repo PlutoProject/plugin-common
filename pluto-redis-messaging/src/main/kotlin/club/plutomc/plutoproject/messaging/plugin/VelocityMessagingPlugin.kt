@@ -27,7 +27,7 @@ class VelocityMessagingPlugin @Inject constructor(server: ProxyServer, logger: L
 
     companion object {
         private lateinit var logger: Logger
-        private lateinit var server: ProxyServer
+        lateinit var server: ProxyServer
         private lateinit var dataDir: Path
         private lateinit var manager: MessageManager
     }
