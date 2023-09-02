@@ -11,7 +11,7 @@ interface Channel : Closeable {
 
     fun publish(content: JsonObject)
 
-    fun subscribe(name: String, action: Action)
+    fun subscribe(name: String, subscription: Subscription)
 
     fun unsubscribe(name: String)
 

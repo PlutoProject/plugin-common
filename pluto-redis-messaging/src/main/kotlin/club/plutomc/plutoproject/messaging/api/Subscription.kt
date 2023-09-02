@@ -2,7 +2,7 @@ package club.plutomc.plutoproject.messaging.api
 
 import com.google.gson.JsonObject
 
-interface Action {
+interface Subscription {
 
     fun onMessage(channel: Channel, content: JsonObject)
 
