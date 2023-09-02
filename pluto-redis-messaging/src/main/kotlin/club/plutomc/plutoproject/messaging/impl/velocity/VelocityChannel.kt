@@ -1,6 +1,6 @@
 package club.plutomc.plutoproject.messaging.impl.velocity
 
-import club.plutomc.plutoproject.messaging.api.Action
+import club.plutomc.plutoproject.messaging.api.Subscription
 import club.plutomc.plutoproject.messaging.api.Channel
 import club.plutomc.plutoproject.messaging.api.MessageManager
 import club.plutomc.plutoproject.messaging.impl.ImplUtils
@@ -22,7 +22,7 @@ class VelocityChannel(name: String, messageManager: MessageManager, jedis: Jedis
     private var thisChannel: Channel
     private var messageManager: MessageManager
     private var jedis: JedisPool
-    private var actions: ConcurrentHashMap<String, Action>
+    private var subs: ConcurrentHashMap<String, Subscription>
     private lateinit var clientChannelPublish: Job
 
     init {
@@ -30,7 +30,7 @@ class VelocityChannel(name: String, messageManager: MessageManager, jedis: Jedis
         this.thisChannel = this
         this.messageManager = messageManager
         this.jedis = jedis
-        this.actions = ConcurrentHashMap()
+        this.subs = ConcurrentHashMap()
 
         clientChannelPublish()
     }
@@ -50,20 +50,20 @@ class VelocityChannel(name: String, messageManager: MessageManager, jedis: Jedis
         publishMessage(content)
     }
 
-    override fun subscribe(name: String, action: Action) {
+    override fun subscribe(name: String, subscription: Subscription) {
         if (!isValid()) {
             return
         }
 
-        if (actions.contains(name)) {
+        if (subs.contains(name)) {
             return
         }
 
-        actions[name] = action
+        subs[name] = subscription
     }
 
     override fun unsubscribe(name: String) {
-        actions.remove(name)
+        subs.remove(name)
     }
 
     override fun close() {
@@ -101,7 +101,7 @@ class VelocityChannel(name: String, messageManager: MessageManager, jedis: Jedis
 
                     val messageContent = JsonParser.parseString(responseContent.get("content").asString).asJsonObject
                     ImplUtils.debugLogInfo("Received a message published by client: $messageContent, original message: $responseContent")
-                    actions.forEach {
+                    subs.forEach {
                         ImplUtils.debugLogInfo("Running action: ${it.key}")
                         it.value.onMessage(thisChannel, messageContent)
                     }
