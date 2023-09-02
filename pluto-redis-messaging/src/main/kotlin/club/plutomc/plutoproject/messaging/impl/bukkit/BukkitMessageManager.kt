@@ -83,6 +83,8 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
             }
         }
 
+        requestChannelExist(channel, id.toString())
+
         runBlocking {
             response.await()
             ImplUtils.debugLogInfo("Deferred waiting completed! ()")
