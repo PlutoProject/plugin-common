@@ -2,8 +2,15 @@ package club.plutomc.plutoproject.messaging.api
 
 import com.google.gson.JsonObject
 
-interface Subscription {
+@Suppress("UNUSED_PARAMETER")
+class Subscription {
 
-    fun onMessage(channel: Channel, content: JsonObject)
+    fun onMessage(channel: Channel, content: JsonObject) {
+
+    }
+
+    fun onMessageWithSelf(channel: Channel, content: JsonObject) {
+
+    }
 
 }

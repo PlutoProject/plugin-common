@@ -1,9 +1,12 @@
 package club.plutomc.plutoproject.messaging.impl.velocity
 
-import club.plutomc.plutoproject.messaging.api.Subscription
 import club.plutomc.plutoproject.messaging.api.Channel
 import club.plutomc.plutoproject.messaging.api.MessageManager
+import club.plutomc.plutoproject.messaging.api.Subscription
+import club.plutomc.plutoproject.messaging.plugin.event.velocity.MessageReceivedEvent
+import club.plutomc.plutoproject.messaging.plugin.event.velocity.SelfMessageReceivedEvent
 import club.plutomc.plutoproject.messaging.impl.ImplUtils
+import club.plutomc.plutoproject.messaging.plugin.VelocityMessagingPlugin
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -47,7 +50,12 @@ class VelocityChannel(name: String, messageManager: MessageManager, jedis: Jedis
             return
         }
 
-        publishMessage(content)
+        subs.forEach {
+            it.value.onMessageWithSelf(thisChannel, content)
+        }
+
+        VelocityMessagingPlugin.server.eventManager.fire(SelfMessageReceivedEvent(name, content))
+        publishMessageToBukkit(content)
     }
 
     override fun subscribe(name: String, subscription: Subscription) {
@@ -70,7 +78,7 @@ class VelocityChannel(name: String, messageManager: MessageManager, jedis: Jedis
         clientChannelPublish.cancel()
     }
 
-    private fun publishMessage(jsonObject: JsonObject) {
+    private fun publishMessageToBukkit(jsonObject: JsonObject) {
         val requestContent = JsonObject()
         val id = UUID.randomUUID()
         requestContent.addProperty("id", id.toString())
@@ -101,10 +109,14 @@ class VelocityChannel(name: String, messageManager: MessageManager, jedis: Jedis
 
                     val messageContent = JsonParser.parseString(responseContent.get("content").asString).asJsonObject
                     ImplUtils.debugLogInfo("Received a message published by client: $messageContent, original message: $responseContent")
+
                     subs.forEach {
                         ImplUtils.debugLogInfo("Running action: ${it.key}")
                         it.value.onMessage(thisChannel, messageContent)
                     }
+
+                    VelocityMessagingPlugin.server.eventManager.fire(MessageReceivedEvent(name, messageContent))
+                    jedis.resource.publish("message_internal_proxy", responseContent.toString())
                 }
             }, "message_internal_bukkit")
         }
