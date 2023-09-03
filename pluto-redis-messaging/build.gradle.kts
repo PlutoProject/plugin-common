@@ -1,4 +1,4 @@
-group = "club.plutomc.plutoproject.common.connector"
+group = "club.plutomc.plutoproject.framework.messaging"
 version = "3.0.0-SNAPSHOT"
 
 plugins {
@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-
+    compileOnly(project(":pluto-connector"))
 }
 
 publishing {
@@ -19,7 +19,7 @@ publishing {
             from(components["kotlin"])
 
             groupId = "club.plutomc.plutoproject"
-            artifactId = "connector"
+            artifactId = "redis-messaging"
             version = project.version.toString()
         }
     }
