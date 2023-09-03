@@ -4,14 +4,14 @@ import java.util.logging.Logger
 
 internal object ImplUtils {
 
-    private val logger = Logger.getLogger("connector-internal")
+    private val logger = Logger.getLogger("messaging-internal")
 
     private fun isDebugLogEnabled(): Boolean {
-        if (!System.getProperties().contains("connectorDebugLog")) {
+        if (!System.getProperties().containsKey("messagingDebugLog")) {
             return false
         }
 
-        if (!System.getProperty("connectorDebugLog").toBoolean()) {
+        if (!System.getProperty("messagingDebugLog").toBoolean()) {
             return false
         }
 
