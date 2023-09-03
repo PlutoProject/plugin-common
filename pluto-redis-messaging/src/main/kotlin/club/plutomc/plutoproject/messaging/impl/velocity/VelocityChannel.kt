@@ -3,10 +3,10 @@ package club.plutomc.plutoproject.messaging.impl.velocity
 import club.plutomc.plutoproject.messaging.api.Channel
 import club.plutomc.plutoproject.messaging.api.MessageManager
 import club.plutomc.plutoproject.messaging.api.Subscription
-import club.plutomc.plutoproject.messaging.plugin.event.velocity.MessageReceivedEvent
-import club.plutomc.plutoproject.messaging.plugin.event.velocity.SelfMessageReceivedEvent
 import club.plutomc.plutoproject.messaging.impl.ImplUtils
 import club.plutomc.plutoproject.messaging.plugin.VelocityMessagingPlugin
+import club.plutomc.plutoproject.messaging.plugin.event.velocity.MessageReceivedEvent
+import club.plutomc.plutoproject.messaging.plugin.event.velocity.SelfMessageReceivedEvent
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.DelicateCoroutinesApi

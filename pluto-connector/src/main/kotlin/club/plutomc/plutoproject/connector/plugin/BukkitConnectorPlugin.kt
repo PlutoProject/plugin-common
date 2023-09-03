@@ -49,7 +49,7 @@ class BukkitConnectorPlugin : JavaPlugin() {
         requestContent.addProperty("id", id.toString())
         requestContent.addProperty("type", "request")
 
-        GlobalScope.launch {
+        val receiveJob = GlobalScope.launch {
             jedis.resource.subscribe(object : JedisPubSub() {
                 override fun onMessage(channel: String?, message: String?) {
                     val nonNullMessage = checkNotNull(message)
@@ -98,6 +98,10 @@ class BukkitConnectorPlugin : JavaPlugin() {
                 jedis.resource.publish("connector_bukkit", requestContent.toString())
                 delay(5000L)
             }
+        }
+
+        runBlocking {
+            receiveJob.join()
         }
 
         received = true

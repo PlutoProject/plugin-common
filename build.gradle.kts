@@ -45,10 +45,12 @@ allprojects {
 
         // Paper
         compileOnly("io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT")
+        compileOnly("cloud.commandframework:cloud-paper:1.8.3")
 
         // Velocity
         compileOnly("com.velocitypowered:velocity-api:3.1.1")
         kapt("com.velocitypowered:velocity-api:3.1.1")
+        compileOnly("cloud.commandframework:cloud-velocity:1.8.3")
 
         // Java libraries
         compileOnly("commons-io:commons-io:2.13.0")

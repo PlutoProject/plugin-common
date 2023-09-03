@@ -11,6 +11,7 @@ repositories {
 
 dependencies {
     compileOnly(project(":pluto-connector"))
+    compileOnly(project(":pluto-api-utils"))
 }
 
 publishing {

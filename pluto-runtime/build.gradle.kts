@@ -23,10 +23,12 @@ dependencies {
 
     // Paper
     compileOnly("io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT")
+    api("cloud.commandframework:cloud-paper:1.8.3")
 
     // Velocity
     compileOnly("com.velocitypowered:velocity-api:3.1.1")
     kapt("com.velocitypowered:velocity-api:3.1.1")
+    api("cloud.commandframework:cloud-velocity:1.8.3")
 
     // api-utils
     api(project(":pluto-api-utils"))

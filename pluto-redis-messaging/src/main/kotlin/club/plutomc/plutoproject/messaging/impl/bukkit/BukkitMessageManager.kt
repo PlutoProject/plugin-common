@@ -1,8 +1,10 @@
 package club.plutomc.plutoproject.messaging.impl.bukkit
 
+import club.plutomc.plutoproject.apiutils.concurrent.launchWithPluto
 import club.plutomc.plutoproject.messaging.api.Channel
 import club.plutomc.plutoproject.messaging.api.MessageManager
 import club.plutomc.plutoproject.messaging.impl.ImplUtils
+import club.plutomc.plutoproject.messaging.plugin.BukkitMessagingPlugin
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.*
@@ -20,6 +22,7 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
     private val thisMessageManager: MessageManager
     private val jedis: JedisPool
     private var isClosed = false
+    private var scope: CoroutineScope
     private lateinit var heartbeat: Job
     private lateinit var heartbeatWait: Job
     private lateinit var serverChannelRegister: Job
@@ -31,10 +34,12 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
         this.channelMap = ConcurrentHashMap()
         this.thisMessageManager = this
         this.jedis = jedis
+        this.scope = BukkitMessagingPlugin.coroutineScope
         this.coroutineData = MutableSharedFlow(10)
 
         init()
         // heartbeat()
+        // heartbeatWait()
         serverChannelRegister()
         serverChannelExist()
         serverChannelUnregister()
@@ -87,7 +92,7 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
 
         runBlocking {
             response.await()
-            ImplUtils.debugLogInfo("Deferred waiting completed! ()")
+            ImplUtils.debugLogInfo("Deferred waiting completed! (${response.getCompleted()}")
         }
 
         return response.getCompleted().toBoolean()
@@ -126,6 +131,30 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
         requestContent.addProperty("id", id.toString())
         requestContent.addProperty("type", "message_client_request")
 
+        val receiveJob = scope.launchWithPluto {
+            jedis.resource.subscribe(object : JedisPubSub() {
+                override fun onMessage(channel: String?, message: String?) {
+                    checkNotNull(message)
+                    val responseContent = JsonParser.parseString(message).asJsonObject
+
+                    if (responseContent.get("id").asString != id.toString()) {
+                        return
+                    }
+
+                    if (responseContent.get("type").asString != "message_server_response") {
+                        return
+                    }
+
+                    ImplUtils.debugLogInfo("Received server response, client initialized: $responseContent")
+                    unsubscribe()
+                }
+            }, "message_internal_proxy")
+        }
+
+        runBlocking {
+            delay(3000L)
+        }
+
         val requestJob = GlobalScope.launch {
             while (!received) {
                 ImplUtils.debugLogInfo("Send client init request: $requestContent")
@@ -134,22 +163,9 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
             }
         }
 
-        jedis.resource.subscribe(object : JedisPubSub() {
-            override fun onMessage(channel: String?, message: String?) {
-                checkNotNull(message)
-                val responseContent = JsonParser.parseString(message).asJsonObject
-
-                if (responseContent.get("id").asString != id.toString()) {
-                    return
-                }
-
-                if (responseContent.get("type").asString != "message_server_response") {
-                    return
-                }
-
-                ImplUtils.debugLogInfo("Received server response, client initialized: $responseContent")
-            }
-        }, "message_internal_proxy")
+        runBlocking {
+            receiveJob.join()
+        }
 
         received = true
         requestJob.cancel()
@@ -205,6 +221,7 @@ class BukkitMessageManager(jedis: JedisPool) : MessageManager {
         val requestContent = JsonObject()
         requestContent.addProperty("id", id)
         requestContent.addProperty("type", "message_client_channel_exist")
+        requestContent.addProperty("channel_name", name)
 
         ImplUtils.debugLogInfo("Sending channel check-exist request to server (id: $id): $requestContent")
         jedis.resource.publish("message_internal_bukkit", requestContent.toString())
