@@ -64,7 +64,7 @@ internal object DatabaseUtils {
     }
 
     internal fun getMongoPassword(): String? {
-        return getInformation("mongoPassword", "MONGO_Password")
+        return getInformation("mongoPassword", "MONGO_PASSWORD")
     }
 
     internal fun createMongoClient(
