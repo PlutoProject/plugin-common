@@ -4,4 +4,4 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-fun CoroutineScope.launchWithPluto(block: CoroutineScope.() -> Unit): Job = launch(PlutoDispatcher()) { block() }
+fun CoroutineScope.launchWithPluto(block: suspend CoroutineScope.() -> Unit): Job = launch(coroutineContext + PlutoDispatcher()) { block() }
