@@ -1,8 +1,6 @@
 package club.plutomc.plutoproject.connector.plugin
 
-import club.plutomc.plutoproject.connector.api.Connector
-import club.plutomc.plutoproject.connector.api.ConnectorApiProvider
-import club.plutomc.plutoproject.connector.impl.BasicConnector
+import club.plutomc.plutoproject.connector.api.ConnectionManager
 import com.google.inject.Inject
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent
@@ -10,6 +8,7 @@ import com.velocitypowered.api.event.proxy.ProxyShutdownEvent
 import com.velocitypowered.api.plugin.Plugin
 import com.velocitypowered.api.plugin.annotation.DataDirectory
 import com.velocitypowered.api.proxy.ProxyServer
+import java.io.File
 import java.nio.file.Path
 import java.util.logging.Logger
 
@@ -25,14 +24,14 @@ class VelocityConnectorPlugin @Inject constructor(server: ProxyServer, logger: L
     companion object {
         lateinit var logger: Logger
         private lateinit var server: ProxyServer
-        private lateinit var dataDir: Path
-        private lateinit var connector: Connector
+        private lateinit var dataFolder: File
+        private lateinit var connectionManager: ConnectionManager
     }
 
     init {
         Companion.server = server
         Companion.logger = logger
-        Companion.dataDir = dataDir
+        Companion.dataFolder = dataDir.toFile()
     }
 
     @Subscribe
@@ -41,15 +40,24 @@ class VelocityConnectorPlugin @Inject constructor(server: ProxyServer, logger: L
             return
         }
 
-        connector = BasicConnector(DatabaseUtils.createJedisPool(), DatabaseUtils.createMongoClient())
-        ConnectorApiProvider.connector = connector
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs()
+        }
+
+        val configFile = File(dataFolder, "settings.conf")
+
+        if (!configFile.exists()) {
+            configFile.createNewFile()
+        }
+
+        connectionManager = SharedMethods.platformConnectionManager(configFile)
 
         logger.info("Connector Velocity - Enabled")
     }
 
     @Subscribe
     fun onProxyShutdown(event: ProxyShutdownEvent) {
-        connector.close()
+        connectionManager.close()
         logger.info("Connector Velocity - Disabled")
     }
 

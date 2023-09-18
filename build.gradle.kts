@@ -58,6 +58,7 @@ allprojects {
         compileOnly("com.google.code.gson:gson:2.10.1")
         compileOnly("redis.clients:jedis:4.4.3")
         compileOnly("com.google.code.gson:gson:2.10.1")
+        compileOnly("com.typesafe:config:1.4.2")
 
         // Database drivers
         compileOnly("redis.clients:jedis:4.4.3")

@@ -1,9 +1,9 @@
-main: club.plutomc.plutoproject.connector.plugin.BukkitConnectorPlugin
-name: pluto-connector
-version: 3.0.0-SNAPSHOT
-api-version: 1.13
+main: "club.plutomc.plutoproject.connector.plugin.BukkitConnectorPlugin"
+name: "pluto-connector"
+version: "3.0.0-SNAPSHOT"
+api-version: "1.20"
 depend:
-  - pluto-runtime
+  - "pluto-runtime"
 authors:
-  - nostalfinals
-  - Members of PlutoProject
+  - "nostalfinals"
+  - "Members of PlutoProject"

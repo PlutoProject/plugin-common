@@ -2,17 +2,17 @@ package club.plutomc.plutoproject.connector.api
 
 object ConnectorApiProvider {
 
-    private var _connector: Connector? = null
-    var connector: Connector
+    private var _connectionManager: ConnectionManager? = null
+    var connectionManager: ConnectionManager
         get() {
-            return checkNotNull(_connector)
+            return checkNotNull(_connectionManager)
         }
         set(value) {
-            if (_connector != null) {
+            if (_connectionManager != null) {
                 return
             }
 
-            _connector = value
+            _connectionManager = value
         }
 
 }
