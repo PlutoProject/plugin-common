@@ -19,7 +19,7 @@ import java.util.logging.Logger
     version = "3.0.0-SNAPSHOT",
     authors = ["nostalfinals", "Members of PlutoProject"]
 )
-class VelocityConnectorPlugin @Inject constructor(server: ProxyServer, logger: Logger, @DataDirectory dataDir: Path) {
+class VelocityConnectorPlugin @Inject constructor(server: ProxyServer, logger: Logger, @DataDirectory dataFolder: Path) {
 
     companion object {
         lateinit var logger: Logger
@@ -31,7 +31,7 @@ class VelocityConnectorPlugin @Inject constructor(server: ProxyServer, logger: L
     init {
         Companion.server = server
         Companion.logger = logger
-        Companion.dataFolder = dataDir.toFile()
+        Companion.dataFolder = dataFolder.toFile()
     }
 
     @Subscribe
