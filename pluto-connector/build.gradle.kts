@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-
+    compileOnly(project(":pluto-api-utils"))
 }
 
 publishing {

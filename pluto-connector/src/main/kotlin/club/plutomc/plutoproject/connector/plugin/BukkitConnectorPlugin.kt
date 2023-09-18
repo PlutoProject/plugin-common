@@ -1,28 +1,33 @@
 package club.plutomc.plutoproject.connector.plugin
 
-import club.plutomc.plutoproject.connector.api.Connector
-import club.plutomc.plutoproject.connector.api.ConnectorApiProvider
-import club.plutomc.plutoproject.connector.impl.BasicConnector
+import club.plutomc.plutoproject.connector.api.ConnectionManager
 import org.bukkit.plugin.java.JavaPlugin
+import java.io.File
 
 class BukkitConnectorPlugin : JavaPlugin() {
 
     companion object {
-        private lateinit var connector: Connector
+        private lateinit var connectionManager: ConnectionManager
     }
 
     override fun onEnable() {
-        val jedis = DatabaseUtils.createJedisPool()
-        val mongo = DatabaseUtils.createMongoClient()
+        if (!dataFolder.exists()) {
+            dataFolder.mkdirs()
+        }
 
-        connector = BasicConnector(jedis, mongo)
-        ConnectorApiProvider.connector = connector
+        val configFile = File(dataFolder, "settings.conf")
+
+        if (!configFile.exists()) {
+            configFile.createNewFile()
+        }
+
+        connectionManager = SharedMethods.platformConnectionManager(configFile)
 
         logger.info("Connector Bukkit - Enabled")
     }
 
     override fun onDisable() {
-        connector.close()
+        connectionManager.close()
         logger.info("Connector Bukkit - Disabled")
     }
 
