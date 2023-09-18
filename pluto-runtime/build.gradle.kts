@@ -16,6 +16,7 @@ dependencies {
     api("com.google.code.gson:gson:2.10.1")
     api("redis.clients:jedis:4.4.3")
     api("com.google.code.gson:gson:2.10.1")
+    api("com.typesafe:config:1.4.2")
 
     // Database drivers
     api("redis.clients:jedis:4.4.3")
