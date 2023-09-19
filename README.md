@@ -1,5 +1,7 @@
 # pluto-plugins
 
+[![CodeFactor](https://www.codefactor.io/repository/github/plutoproject/pluto-plugins/badge/1.20.1)](https://www.codefactor.io/repository/github/plutoproject/pluto-plugins/overview/1.20.1)
+
 星社 插件仓库。
 
 ## 模块说明
