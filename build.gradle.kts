@@ -3,6 +3,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     kotlin("jvm") version "1.9.0"
     kotlin("kapt") version "1.9.0"
+    id("org.jetbrains.dokka") version "1.9.0"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
     id("java")
     id("idea")
@@ -25,6 +26,7 @@ allprojects {
         plugin("idea")
         plugin("java")
         plugin("com.github.johnrengelman.shadow")
+        plugin("org.jetbrains.dokka")
     }
 
     repositories {
@@ -59,10 +61,12 @@ allprojects {
         compileOnly("redis.clients:jedis:4.4.3")
         compileOnly("com.google.code.gson:gson:2.10.1")
         compileOnly("com.typesafe:config:1.4.2")
+        compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
         // Database drivers
         compileOnly("redis.clients:jedis:4.4.3")
         compileOnly("org.mongodb:mongodb-driver-sync:4.10.2")
+        compileOnly("org.apache.kafka:kafka-clients:3.5.1")
     }
 
     java {
@@ -73,6 +77,14 @@ allprojects {
 
     tasks.withType<org.gradle.jvm.tasks.Jar>().configureEach {
         destinationDirectory = file("$rootDir/products")
+    }
+
+    tasks.dokkaJavadoc {
+        dependsOn(tasks.compileKotlin)
+    }
+
+    tasks.dokkaJekyll {
+        dependsOn(tasks.compileKotlin)
     }
 }
 

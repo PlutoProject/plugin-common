@@ -17,10 +17,12 @@ dependencies {
     api("redis.clients:jedis:4.4.3")
     api("com.google.code.gson:gson:2.10.1")
     api("com.typesafe:config:1.4.2")
+    api("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
     // Database drivers
     api("redis.clients:jedis:4.4.3")
     api("org.mongodb:mongodb-driver-sync:4.10.2")
+    api("org.apache.kafka:kafka-clients:3.5.1")
 
     // Paper
     compileOnly("io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT")
